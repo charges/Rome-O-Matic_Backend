@@ -18,7 +18,23 @@ const WIKI_TOPICS = {
     'incategory:"Roman Catholic churches in Rome" Rome',
     'incategory:"Titular churches in Rome" Rome',
     'incategory:"Basilicas in Rome" Rome'
-  ]
+  ],
+
+  "rome-ancient-sites": [
+  "Category:Ancient Roman sites in Rome",
+  "Category:Roman ruins in Rome",
+  "Category:Archaeological sites in Rome"
+],
+  "rome-museums": [
+  "Category:Museums in Rome",
+  "Category:Art museums and galleries in Rome",
+  "Category:History museums in Rome"
+],
+  "rome-museums": [
+  "Category:Museums in Rome",
+  "Category:Art museums and galleries in Rome",
+  "Category:History museums in Rome"
+]
 };
 
 const WIKI_CATEGORY_TOPICS = {
@@ -27,7 +43,21 @@ const WIKI_CATEGORY_TOPICS = {
     "Category:Roman Catholic churches in Rome",
     "Category:Titular churches in Rome",
     "Category:Basilicas in Rome"
-  ]
+  ],
+  "rome-churches-renaissance": [
+  'deepcat:"Renaissance churches in Rome"',
+  'deepcat:"Baroque churches in Rome"'
+],
+  "rome-ancient-sites": [
+  'deepcat:"Ancient Roman sites in Rome"',
+  'deepcat:"Roman ruins in Rome"',
+  'deepcat:"Archaeological sites in Rome"'
+],
+  "rome-museums": [
+  'deepcat:"Museums in Rome"',
+  'deepcat:"Art museums and galleries in Rome"',
+  'deepcat:"History museums in Rome"'
+]
 };
 
 /**
