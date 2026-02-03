@@ -13,6 +13,12 @@ const app = express();
  * =========================
  */
 const WIKI_TOPICS = {
+"ancient-rome": [
+  'deepcat:"Ancient Rome"',
+  'deepcat:"Roman Republic"',
+  'deepcat:"Roman Empire"'
+],
+  
   "american-literature": [
     'deepcat:"American literature"',
     'deepcat:"American novelists"',
@@ -71,6 +77,11 @@ const WIKI_TOPICS = {
 };
 
 const WIKI_CATEGORY_TOPICS = {
+"ancient-rome": [
+  "Category:Ancient Rome",
+  "Category:Roman Republic",
+  "Category:Roman Empire"
+],
   "american-literature": [
     "Category:American literature",
     "Category:American novelists",
