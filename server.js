@@ -649,13 +649,8 @@ async function fetchAllArticles(topicKey) {
     wikiPromise = fetchWikipediaByTopic(topicKey, 6);
   }
 
-  const [wikiArticles, stanfordArticles, smithsonianArticles] = await Promise.all([
-    wikiPromise,
-    fetchStanfordArticles(3),
-    fetchSmithsonianArticles(2)
-  ]);
-
-  return [...wikiArticles, ...stanfordArticles, ...smithsonianArticles];
+ const wikiArticles = await wikiPromise;
+return [...wikiArticles];
 }
 
 /**
