@@ -771,7 +771,15 @@ app.get('/debug/smithsonian', async (req, res) => {
 
 // --- health & root ---
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', cacheSize: articleCache.length, lastRefresh, build: 'rome-o-matic-2026-02-03' });
+  const lastRefreshIso = lastRefresh ? new Date(lastRefresh).toISOString() : null;
+
+  res.json({
+    status: 'ok',
+    cacheSize: articleCache.length,
+    lastRefresh,              // raw ms
+    lastRefreshIso,           // readable UTC ISO
+    build: process.env.BUILD_ID || null
+  });
 });
 
 /**
