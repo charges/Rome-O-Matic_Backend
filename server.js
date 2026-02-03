@@ -771,10 +771,7 @@ app.get('/debug/smithsonian', async (req, res) => {
 
 // --- health & root ---
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', cacheSize: articleCache.length, lastRefresh });
-});
-app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'Historical Feed API is running' });
+  res.json({ status: 'ok', cacheSize: articleCache.length, lastRefresh, build: 'rome-o-matic-2026-02-03' });
 });
 
 /**
