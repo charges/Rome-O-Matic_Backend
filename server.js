@@ -12,29 +12,6 @@ const app = express();
  * Wikipedia topic presets
  * =========================
  */
-const WIKI_TOPICS = {
-  "rome-churches-early": [
-    'incategory:"Churches in Rome" Rome',
-    'incategory:"Roman Catholic churches in Rome" Rome',
-    'incategory:"Titular churches in Rome" Rome',
-    'incategory:"Basilicas in Rome" Rome'
-  ],
-  "rome-ancient-sites": [
-  "Category:Ancient Roman sites in Rome",
-  "Category:Roman ruins in Rome",
-  "Category:Archaeological sites in Rome"
-],
-"rome-churches-renaissance": [
-  "Category:Renaissance churches in Rome",
-  "Category:Baroque churches in Rome"
-],
-  "rome-museums": [
-  "Category:Museums in Rome",
-  "Category:Art museums and galleries in Rome",
-  "Category:History museums in Rome"
-]
-};
-
 const WIKI_CATEGORY_TOPICS = {
   "rome-churches-early": [
     "Category:Churches in Rome",
@@ -42,22 +19,50 @@ const WIKI_CATEGORY_TOPICS = {
     "Category:Titular churches in Rome",
     "Category:Basilicas in Rome"
   ],
-    "rome-ancient-sites": [
-  'deepcat:"Ancient Roman sites in Rome"',
-  'deepcat:"Roman ruins in Rome"',
-  'deepcat:"Archaeological sites in Rome"'
-],
+
   "rome-churches-renaissance": [
-  'deepcat:"Renaissance churches in Rome"',
-  'deepcat:"Baroque churches in Rome"'
-],
+    "Category:Renaissance churches in Rome",
+    "Category:Baroque church buildings in Rome"
+  ],
+
+  "rome-ancient-sites": [
+    "Category:Ancient Roman sites in Rome",
+    "Category:Roman ruins in Rome",
+    "Category:Archaeological sites in Rome"
+  ],
+
   "rome-museums": [
-  'deepcat:"Museums in Rome"',
-  'deepcat:"Art museums and galleries in Rome"',
-  'deepcat:"History museums in Rome"'
-]
+    "Category:Museums in Rome",
+    "Category:Art museums and galleries in Rome",
+    "Category:History museums in Rome"
+  ]
 };
 
+const WIKI_TOPICS = {
+  "rome-churches-early": [
+    'deepcat:"Churches in Rome"',
+    'deepcat:"Roman Catholic churches in Rome"',
+    'deepcat:"Titular churches in Rome"',
+    'deepcat:"Basilicas in Rome"'
+  ],
+
+  "rome-churches-renaissance": [
+    'deepcat:"Renaissance churches in Rome"',
+    'deepcat:"Baroque church buildings in Rome"'
+  ],
+
+  "rome-ancient-sites": [
+    'deepcat:"Ancient Roman sites in Rome"',
+    'deepcat:"Roman ruins in Rome"',
+    'deepcat:"Archaeological sites in Rome"'
+  ],
+
+  "rome-museums": [
+    'deepcat:"Museums in Rome"',
+    'deepcat:"Art museums and galleries in Rome"',
+    'deepcat:"History museums in Rome"'
+  ]
+};
 /**
  * =========================
  * Crash logging
@@ -207,13 +212,15 @@ async function wikiSearchTitles(srsearch, limit = 50) {
       list: 'search',
       srsearch,
       srlimit: Math.min(limit, 50),
+      srnamespace: 0, 
       format: 'json'
     }
   });
   const hits = resp?.data?.query?.search || [];
   return hits
     .map(h => h.title)
-    .filter(t => !t.toLowerCase().includes('(disambiguation)'));
+    .filter(t => !t.toLowerCase().includes('(disambiguation)'))
+  .filter(t => !t.startsWith('Category:'));
 }
 
 async function wikiSummariesForTitles(titles, concurrency = 4) {
@@ -222,6 +229,7 @@ async function wikiSummariesForTitles(titles, concurrency = 4) {
   }));
 
   const results = await mapWithLimit(requests, concurrency, async (r) => {
+    titles = (titles || []).filter(t => t && !t.startsWith('Category:'));
     const resp = await axios.get(r.url, {
       timeout: 6000,
       headers: { 'User-Agent': 'HumanitiesFeed/1.0 (contact: you@example.com)' }
