@@ -617,8 +617,6 @@ app.get('/api/articles', async (req, res) => {
     const bypass = force === '1' || force === 'true';
     const topicKey = String(req.query.topic || '').toLowerCase();
 
-        const topicKey = String(req.query.topic || '').toLowerCase();
-
     // ✅ NEW: Reject unknown topic keys (prevents silent fallback to random Wikipedia)
     if (topicKey && !WIKI_CATEGORY_TOPICS[topicKey] && !WIKI_TOPICS[topicKey]) {
       return res.status(400).json({
