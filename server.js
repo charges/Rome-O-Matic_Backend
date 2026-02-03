@@ -223,7 +223,6 @@ async function getCategoryMembers(cmtitle, cmtype = 'page|subcat', cmlimit = 200
       list: 'categorymembers',
       cmtitle,
       cmtype,
-      cmnamespace: 0,
       cmlimit: Math.min(cmlimit, 500),
       continue: '',
       cmcontinue,
