@@ -159,12 +159,16 @@ function extractRomanFromHref(href) {
  */
 function categorizeArticle(title, text) {
   const content = (title + ' ' + text).toLowerCase();
+
   if (content.match(/\bancient\b|\begypt\b|\begyptian\b|\bgreek\b|\bmesopotamia\b|\bbc\b|\bbce\b|\broman republic\b|\broman empire\b/)) {
-  return 'ancient';
+    return 'ancient';
+  }
+
   if (content.match(/medieval|middle ages|feudal|crusade|viking/)) return 'medieval';
   if (content.match(/renaissance|reformation|enlightenment|1400|1500|1600|1700/)) return 'early-modern';
   if (content.match(/industrial|revolution|1800|1900|20th century|war|modern/)) return 'modern';
   if (content.match(/technology|invention|computer|press|printing/)) return 'technology';
+
   return 'ancient';
 }
 
