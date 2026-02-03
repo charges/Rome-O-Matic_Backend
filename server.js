@@ -782,6 +782,24 @@ app.get('/health', (req, res) => {
   });
 });
 
+// --- List available topic keys (for UI + debugging) ---
+app.get('/api/topics', (req, res) => {
+  const keys = Array.from(
+    new Set([
+      ...Object.keys(WIKI_CATEGORY_TOPICS || {}),
+      ...Object.keys(WIKI_TOPICS || {})
+    ])
+  ).sort();
+
+  res.json({
+    topics: keys.map(k => ({
+      key: k,
+      seedCategories: WIKI_CATEGORY_TOPICS?.[k] || [],
+      deepcatQueries: WIKI_TOPICS?.[k] || []
+    }))
+  });
+});
+
 /**
  * =========================
  * Start server
