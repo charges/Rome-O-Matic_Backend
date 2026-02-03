@@ -35,7 +35,25 @@ const WIKI_CATEGORY_TOPICS = {
     "Category:Museums in Rome",
     "Category:Art museums and galleries in Rome",
     "Category:History museums in Rome"
-  ]
+  ],
+  "rome-palazzi": [
+  "Category:Palaces in Rome",
+  "Category:Historic buildings in Rome"
+],
+"rome-monuments": [
+  "Category:Fountains in Rome",
+  "Category:Statues in Rome",
+  "Category:Monuments and memorials in Rome"
+],
+"rome-public-places": [
+  "Category:Public markets in Rome",
+  "Category:Piazzas in Rome",
+  "Category:Tourist attractions in Rome"
+],
+"rome-architecture": [
+  "Category:Architecture in Rome",
+  "Category:Buildings and structures in Rome"
+]
 };
 
 const WIKI_TOPICS = {
@@ -61,7 +79,25 @@ const WIKI_TOPICS = {
     'deepcat:"Museums in Rome"',
     'deepcat:"Art museums and galleries in Rome"',
     'deepcat:"History museums in Rome"'
-  ]
+  ],
+  "rome-palazzi": [
+  'deepcat:"Palaces in Rome"',
+  'deepcat:"Historic buildings in Rome"'
+],
+"rome-monuments": [
+  'deepcat:"Fountains in Rome"',
+  'deepcat:"Statues in Rome"',
+  'deepcat:"Monuments and memorials in Rome"'
+],
+"rome-public-places": [
+  'deepcat:"Public markets in Rome"',
+  'deepcat:"Piazzas in Rome"',
+  'deepcat:"Tourist attractions in Rome"'
+],
+"rome-architecture": [
+  'deepcat:"Architecture in Rome"',
+  'deepcat:"Buildings and structures in Rome"'
+]
 };
 /**
  * =========================
