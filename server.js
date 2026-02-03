@@ -1,4 +1,4 @@
-// server.js - Historical Feed Backend
+// server.js - Rome-O-Matic Backend
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -13,7 +13,6 @@ const app = express();
  * =========================
  */
 const WIKI_TOPICS = {
-const WIKI_TOPICS = {
   "rome-churches-early": [
     'incategory:"Churches in Rome" Rome',
     'incategory:"Roman Catholic churches in Rome" Rome',
@@ -22,7 +21,6 @@ const WIKI_TOPICS = {
   ]
 };
 
-const WIKI_CATEGORY_TOPICS = {
 const WIKI_CATEGORY_TOPICS = {
   "rome-churches-early": [
     "Category:Churches in Rome",
