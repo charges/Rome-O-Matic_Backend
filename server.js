@@ -13,18 +13,22 @@ const app = express();
  * =========================
  */
 const WIKI_TOPICS = {
-"rome-churches-early": [
-  'deepcat:"Early Christian churches in Rome"',
-  'deepcat:"Medieval churches in Rome"',
-  'deepcat:"Titular churches in Rome"'
-]
+const WIKI_TOPICS = {
+  "rome-churches-early": [
+    'incategory:"Churches in Rome" Rome',
+    'incategory:"Roman Catholic churches in Rome" Rome',
+    'incategory:"Titular churches in Rome" Rome',
+    'incategory:"Basilicas in Rome" Rome'
+  ]
 };
 
 const WIKI_CATEGORY_TOPICS = {
-"rome-churches-early": [
-  "Category:Early Christian churches in Rome",
-  "Category:Medieval churches in Rome",
-  "Category:Titular churches in Rome"
+const WIKI_CATEGORY_TOPICS = {
+  "rome-churches-early": [
+    "Category:Churches in Rome",
+    "Category:Roman Catholic churches in Rome",
+    "Category:Titular churches in Rome",
+    "Category:Basilicas in Rome"
   ]
 };
 
