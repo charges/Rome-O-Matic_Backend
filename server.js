@@ -313,8 +313,16 @@ async function fetchWikipediaByTopic(topicKey, count = 6) {
     }
   }
 
-  console.warn('No titles found for topic', topicKey, '—falling back to random');
-  return fetchWikipediaArticles(count);
+const isKnownTopic =
+  Boolean(WIKI_CATEGORY_TOPICS?.[topicKey]) || Boolean(WIKI_TOPICS?.[topicKey]);
+
+if (isKnownTopic) {
+  console.warn('No titles found for known topic', topicKey, '—returning empty');
+  return [];
+}
+
+console.warn('No titles found for topic', topicKey, '—falling back to random');
+return fetchWikipediaArticles(count);
 }
 
 /**
