@@ -174,112 +174,18 @@ async function mapWithLimit(items, limit, mapper) {
 
 /**
  * =========================
- * Petrarch (English translation) — Project Gutenberg
+ * Petrarch (Project Gutenberg) sonnets (English translation)
  * =========================
- * Replaces Shakespeare endpoint while keeping /api/sonnet contract the same.
- *
- * Source:
- * - Book page: https://www.gutenberg.org/ebooks/50307
- * - Plain text: http://www.gutenberg.org/cache/epub/50307/pg50307.txt
+ * Source: "Fifteen Sonnets of Petrarch" (PG #50307)
+ * HTML: https://www.gutenberg.org/cache/epub/50307/pg50307-images.html
  */
-const PETRARCH_BOOK_URL = 'https://www.gutenberg.org/ebooks/50307';
-const PETRARCH_TXT_URL  = 'http://www.gutenberg.org/cache/epub/50307/pg50307.txt';
-
-// Cache parsed sonnets (avoid re-downloading on every request)
-let petrarchCache = { ts: 0, sonnets: [] };
-const PETRARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const PETRARCH_SOURCE_URL = 'https://www.gutenberg.org/cache/epub/50307/pg50307-images.html';
 
 function normalizeSonnetText(s) {
   return (s || '')
     .replace(/\r/g, '')
     .replace(/[ \t]+\n/g, '\n')
     .trim();
-}
-
-function parsePetrarchEnglishSonnetsFromGutenberg(fullText) {
-  const text = String(fullText || '').replace(/\r/g, '');
-  const lines = text.split('\n');
-
-  // Heuristic: sonnet blocks in this file appear as:
-  //   XII <Italian first line>
-  //   ...
-  //   XII <English first line>
-  //   ...
-  // Next sonnet begins with next Roman numeral at column 0.
-  const romanLine = /^([IVXLCDM]{1,8})\s+(.+)$/;
-
-  const candidates = [];
-  for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(romanLine);
-    if (!m) continue;
-
-    const roman = m[1];
-    const first = m[2] || '';
-
-    // Skip obvious non-sonnet header/footer chunks
-    if (first.toUpperCase().includes('END OF PROJECT GUTENBERG')) continue;
-    if (first.toUpperCase().includes('START: FULL LICENSE')) continue;
-
-    candidates.push({ i, roman });
-  }
-
-  // Build sonnets by pairing each roman start with next roman start
-  const sonnets = [];
-  for (let k = 0; k < candidates.length; k++) {
-    const start = candidates[k].i;
-    const roman = candidates[k].roman;
-    const end = (k + 1 < candidates.length) ? candidates[k + 1].i : lines.length;
-
-    const block = lines.slice(start, end).join('\n');
-
-    // Find the ENGLISH portion by locating the second occurrence of "\n<ROMAN> "
-    const needle = `\n${roman} `;
-    const firstPos = block.indexOf(`${roman} `);       // start line begins with roman
-    const secondPos = block.indexOf(needle, firstPos + 2);
-
-    if (secondPos === -1) continue; // not a complete bilingual sonnet block
-
-    const english = block.slice(secondPos + 1); // +1 to remove leading '\n'
-    const englishNormalized = normalizeSonnetText(english);
-
-    // Filter out tiny fragments
-    const wordCount = englishNormalized.split(/\s+/).filter(Boolean).length;
-    if (wordCount < 40) continue;
-
-    sonnets.push({
-      number: roman,
-      text: englishNormalized
-    });
-  }
-
-  // Dedupe by (number,text start)
-  const seen = new Set();
-  const deduped = [];
-  for (const s of sonnets) {
-    const key = `${s.number}|${s.text.slice(0, 80)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    deduped.push(s);
-  }
-
-  return deduped;
-}
-
-async function getPetrarchSonnets() {
-  const now = Date.now();
-  if (petrarchCache.sonnets.length && (now - petrarchCache.ts) < PETRARCH_CACHE_TTL_MS) {
-    return petrarchCache.sonnets;
-  }
-
-  const resp = await axios.get(PETRARCH_TXT_URL, {
-    timeout: 15000,
-    headers: { 'User-Agent': 'RomeOMatic/1.0 (contact: you@example.com)' }
-  });
-
-  const parsed = parsePetrarchEnglishSonnetsFromGutenberg(resp.data || '');
-  petrarchCache = { ts: now, sonnets: parsed };
-
-  return parsed;
 }
 
 /**
@@ -351,11 +257,10 @@ async function wikiSearchTitles(srsearch, limit = 50) {
 }
 
 async function wikiSummariesForTitles(titles, concurrency = 4) {
-  const requests = (titles || [])
-    .filter(t => t && !t.startsWith('Category:'))
-    .map(title => ({
-      url: `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
-    }));
+  const safeTitles = (titles || []).filter(t => t && !t.startsWith('Category:'));
+  const requests = safeTitles.map(title => ({
+    url: `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
+  }));
 
   const results = await mapWithLimit(requests, concurrency, async (r) => {
     const resp = await axios.get(r.url, {
@@ -733,26 +638,53 @@ async function fetchAllArticles(topicKey) {
  * =========================
  */
 
-// --- Petrarch Sonnet (random) ---
+// --- Petrarch Sonnet (random English translation) ---
 app.get('/api/sonnet', async (req, res) => {
   try {
-    const sonnets = await getPetrarchSonnets();
-    if (!sonnets.length) {
+    const resp = await axios.get(PETRARCH_SOURCE_URL, {
+      timeout: 15000,
+      headers: { 'User-Agent': 'RomeOMatic/1.0 (contact: you@example.com)' }
+    });
+
+    const $ = cheerio.load(resp.data || '');
+
+    // Gutenberg structure for PG #50307:
+    // Repeated <h3> blocks with Roman numerals.
+    // First block after a numeral is Italian, second is English.
+    const byRoman = new Map();
+
+    $('h3').each((_, el) => {
+      const roman = $(el).text().trim();
+      if (!/^[IVXLCDM]+$/i.test(roman)) return;
+
+      const text = normalizeSonnetText($(el).nextUntil('h3').text());
+      if (!text) return;
+
+      const key = roman.toUpperCase();
+      if (!byRoman.has(key)) byRoman.set(key, []);
+      byRoman.get(key).push(text);
+    });
+
+    const romans = Array.from(byRoman.entries())
+      .filter(([, blocks]) => Array.isArray(blocks) && blocks.length >= 2)
+      .map(([r]) => r);
+
+    if (!romans.length) {
       return res.status(500).json({ error: 'No Petrarch sonnets parsed from Project Gutenberg source' });
     }
 
-    const pick = sonnets[Math.floor(Math.random() * sonnets.length)];
+    const pickRoman = romans[Math.floor(Math.random() * romans.length)];
+    const blocks = byRoman.get(pickRoman);
 
-    // Optional: first line of English as "title" (keeps your UI nice)
-    const firstLine = (pick.text.split('\n').find(Boolean) || '').trim();
-    const title = firstLine || null;
+    // English translation is the second occurrence
+    const englishText = blocks[1];
 
     return res.json({
       source: 'Petrarch (Project Gutenberg)',
-      number: pick.number,
-      title,
-      text: pick.text,
-      url: PETRARCH_BOOK_URL
+      number: pickRoman,
+      title: `Sonnet ${pickRoman}`,
+      text: englishText,
+      url: PETRARCH_SOURCE_URL
     });
   } catch (err) {
     console.error('[PETRARCH] Error:', err?.message || err);
@@ -768,7 +700,7 @@ app.get('/api/articles', async (req, res) => {
     const bypass = force === '1' || force === 'true';
     const topicKey = String(req.query.topic || '').toLowerCase();
 
-    // Reject unknown topic keys
+    // ✅ Reject unknown topic keys
     if (topicKey && !WIKI_CATEGORY_TOPICS[topicKey] && !WIKI_TOPICS[topicKey]) {
       return res.status(400).json({
         error: `Unknown topic: ${topicKey}`,
