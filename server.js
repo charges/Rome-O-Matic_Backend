@@ -37,23 +37,23 @@ const WIKI_CATEGORY_TOPICS = {
     "Category:History museums in Rome"
   ],
   "rome-palazzi": [
-  "Category:Palaces in Rome",
-  "Category:Historic buildings in Rome"
-],
-"rome-monuments": [
-  "Category:Fountains in Rome",
-  "Category:Statues in Rome",
-  "Category:Monuments and memorials in Rome"
-],
-"rome-public-places": [
-  "Category:Public markets in Rome",
-  "Category:Piazzas in Rome",
-  "Category:Tourist attractions in Rome"
-],
-"rome-architecture": [
-  "Category:Architecture in Rome",
-  "Category:Buildings and structures in Rome"
-]
+    "Category:Palaces in Rome",
+    "Category:Historic buildings in Rome"
+  ],
+  "rome-monuments": [
+    "Category:Fountains in Rome",
+    "Category:Statues in Rome",
+    "Category:Monuments and memorials in Rome"
+  ],
+  "rome-public-places": [
+    "Category:Public markets in Rome",
+    "Category:Piazzas in Rome",
+    "Category:Tourist attractions in Rome"
+  ],
+  "rome-architecture": [
+    "Category:Architecture in Rome",
+    "Category:Buildings and structures in Rome"
+  ]
 };
 
 const WIKI_TOPICS = {
@@ -81,24 +81,25 @@ const WIKI_TOPICS = {
     'deepcat:"History museums in Rome"'
   ],
   "rome-palazzi": [
-  'deepcat:"Palaces in Rome"',
-  'deepcat:"Historic buildings in Rome"'
-],
-"rome-monuments": [
-  'deepcat:"Fountains in Rome"',
-  'deepcat:"Statues in Rome"',
-  'deepcat:"Monuments and memorials in Rome"'
-],
-"rome-public-places": [
-  'deepcat:"Public markets in Rome"',
-  'deepcat:"Piazzas in Rome"',
-  'deepcat:"Tourist attractions in Rome"'
-],
-"rome-architecture": [
-  'deepcat:"Architecture in Rome"',
-  'deepcat:"Buildings and structures in Rome"'
-]
+    'deepcat:"Palaces in Rome"',
+    'deepcat:"Historic buildings in Rome"'
+  ],
+  "rome-monuments": [
+    'deepcat:"Fountains in Rome"',
+    'deepcat:"Statues in Rome"',
+    'deepcat:"Monuments and memorials in Rome"'
+  ],
+  "rome-public-places": [
+    'deepcat:"Public markets in Rome"',
+    'deepcat:"Piazzas in Rome"',
+    'deepcat:"Tourist attractions in Rome"'
+  ],
+  "rome-architecture": [
+    'deepcat:"Architecture in Rome"',
+    'deepcat:"Buildings and structures in Rome"'
+  ]
 };
+
 /**
  * =========================
  * Crash logging
@@ -173,11 +174,20 @@ async function mapWithLimit(items, limit, mapper) {
 
 /**
  * =========================
- * Shakespeare (MIT) sonnets
+ * Petrarch (English translation) — Project Gutenberg
  * =========================
+ * Replaces Shakespeare endpoint while keeping /api/sonnet contract the same.
+ *
+ * Source:
+ * - Book page: https://www.gutenberg.org/ebooks/50307
+ * - Plain text: http://www.gutenberg.org/cache/epub/50307/pg50307.txt
  */
-const SONNETS_INDEX_URL = 'https://shakespeare.mit.edu/Poetry/sonnets.html';
-const SONNETS_BASE_URL  = 'https://shakespeare.mit.edu/Poetry/';
+const PETRARCH_BOOK_URL = 'https://www.gutenberg.org/ebooks/50307';
+const PETRARCH_TXT_URL  = 'http://www.gutenberg.org/cache/epub/50307/pg50307.txt';
+
+// Cache parsed sonnets (avoid re-downloading on every request)
+let petrarchCache = { ts: 0, sonnets: [] };
+const PETRARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 function normalizeSonnetText(s) {
   return (s || '')
@@ -186,9 +196,90 @@ function normalizeSonnetText(s) {
     .trim();
 }
 
-function extractRomanFromHref(href) {
-  const m = String(href || '').match(/^sonnet\.([IVXLCDM]+)\.html$/i);
-  return m ? m[1].toUpperCase() : null;
+function parsePetrarchEnglishSonnetsFromGutenberg(fullText) {
+  const text = String(fullText || '').replace(/\r/g, '');
+  const lines = text.split('\n');
+
+  // Heuristic: sonnet blocks in this file appear as:
+  //   XII <Italian first line>
+  //   ...
+  //   XII <English first line>
+  //   ...
+  // Next sonnet begins with next Roman numeral at column 0.
+  const romanLine = /^([IVXLCDM]{1,8})\s+(.+)$/;
+
+  const candidates = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(romanLine);
+    if (!m) continue;
+
+    const roman = m[1];
+    const first = m[2] || '';
+
+    // Skip obvious non-sonnet header/footer chunks
+    if (first.toUpperCase().includes('END OF PROJECT GUTENBERG')) continue;
+    if (first.toUpperCase().includes('START: FULL LICENSE')) continue;
+
+    candidates.push({ i, roman });
+  }
+
+  // Build sonnets by pairing each roman start with next roman start
+  const sonnets = [];
+  for (let k = 0; k < candidates.length; k++) {
+    const start = candidates[k].i;
+    const roman = candidates[k].roman;
+    const end = (k + 1 < candidates.length) ? candidates[k + 1].i : lines.length;
+
+    const block = lines.slice(start, end).join('\n');
+
+    // Find the ENGLISH portion by locating the second occurrence of "\n<ROMAN> "
+    const needle = `\n${roman} `;
+    const firstPos = block.indexOf(`${roman} `);       // start line begins with roman
+    const secondPos = block.indexOf(needle, firstPos + 2);
+
+    if (secondPos === -1) continue; // not a complete bilingual sonnet block
+
+    const english = block.slice(secondPos + 1); // +1 to remove leading '\n'
+    const englishNormalized = normalizeSonnetText(english);
+
+    // Filter out tiny fragments
+    const wordCount = englishNormalized.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 40) continue;
+
+    sonnets.push({
+      number: roman,
+      text: englishNormalized
+    });
+  }
+
+  // Dedupe by (number,text start)
+  const seen = new Set();
+  const deduped = [];
+  for (const s of sonnets) {
+    const key = `${s.number}|${s.text.slice(0, 80)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(s);
+  }
+
+  return deduped;
+}
+
+async function getPetrarchSonnets() {
+  const now = Date.now();
+  if (petrarchCache.sonnets.length && (now - petrarchCache.ts) < PETRARCH_CACHE_TTL_MS) {
+    return petrarchCache.sonnets;
+  }
+
+  const resp = await axios.get(PETRARCH_TXT_URL, {
+    timeout: 15000,
+    headers: { 'User-Agent': 'RomeOMatic/1.0 (contact: you@example.com)' }
+  });
+
+  const parsed = parsePetrarchEnglishSonnetsFromGutenberg(resp.data || '');
+  petrarchCache = { ts: now, sonnets: parsed };
+
+  return parsed;
 }
 
 /**
@@ -248,7 +339,7 @@ async function wikiSearchTitles(srsearch, limit = 50) {
       list: 'search',
       srsearch,
       srlimit: Math.min(limit, 50),
-      srnamespace: 0, 
+      srnamespace: 0,
       format: 'json'
     }
   });
@@ -256,16 +347,17 @@ async function wikiSearchTitles(srsearch, limit = 50) {
   return hits
     .map(h => h.title)
     .filter(t => !t.toLowerCase().includes('(disambiguation)'))
-  .filter(t => !t.startsWith('Category:'));
+    .filter(t => !t.startsWith('Category:'));
 }
 
 async function wikiSummariesForTitles(titles, concurrency = 4) {
-  const requests = titles.map(title => ({
-    url: `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
-  }));
+  const requests = (titles || [])
+    .filter(t => t && !t.startsWith('Category:'))
+    .map(title => ({
+      url: `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
+    }));
 
   const results = await mapWithLimit(requests, concurrency, async (r) => {
-    titles = (titles || []).filter(t => t && !t.startsWith('Category:'));
     const resp = await axios.get(r.url, {
       timeout: 6000,
       headers: { 'User-Agent': 'HumanitiesFeed/1.0 (contact: you@example.com)' }
@@ -387,16 +479,16 @@ async function fetchWikipediaByTopic(topicKey, count = 6) {
     }
   }
 
-const isKnownTopic =
-  Boolean(WIKI_CATEGORY_TOPICS?.[topicKey]) || Boolean(WIKI_TOPICS?.[topicKey]);
+  const isKnownTopic =
+    Boolean(WIKI_CATEGORY_TOPICS?.[topicKey]) || Boolean(WIKI_TOPICS?.[topicKey]);
 
-if (isKnownTopic) {
-  console.warn('No titles found for known topic', topicKey, '—returning empty');
-  return [];
-}
+  if (isKnownTopic) {
+    console.warn('No titles found for known topic', topicKey, '—returning empty');
+    return [];
+  }
 
-console.warn('No titles found for topic', topicKey, '—falling back to random');
-return fetchWikipediaArticles(count);
+  console.warn('No titles found for topic', topicKey, '—falling back to random');
+  return fetchWikipediaArticles(count);
 }
 
 /**
@@ -631,8 +723,8 @@ async function fetchAllArticles(topicKey) {
     wikiPromise = fetchWikipediaByTopic(topicKey, 6);
   }
 
- const wikiArticles = await wikiPromise;
-return [...wikiArticles];
+  const wikiArticles = await wikiPromise;
+  return [...wikiArticles];
 }
 
 /**
@@ -641,57 +733,30 @@ return [...wikiArticles];
  * =========================
  */
 
-// --- Shakespeare Sonnet (random) ---
+// --- Petrarch Sonnet (random) ---
 app.get('/api/sonnet', async (req, res) => {
   try {
-    const indexResp = await axios.get(SONNETS_INDEX_URL, {
-      timeout: 10000,
-      headers: { 'User-Agent': 'HumanitiesFeed/1.0 (contact: you@example.com)' }
-    });
-
-    const $ = cheerio.load(indexResp.data || '');
-
-    const links = [];
-    $('a[href]').each((_, a) => {
-      const href = $(a).attr('href');
-      if (href && /^sonnet\.[IVXLCDM]+\.html$/i.test(href)) links.push(href);
-    });
-
-    if (!links.length) {
-      return res.status(500).json({ error: 'No sonnet links found on MIT index page' });
+    const sonnets = await getPetrarchSonnets();
+    if (!sonnets.length) {
+      return res.status(500).json({ error: 'No Petrarch sonnets parsed from Project Gutenberg source' });
     }
 
-    const pick = links[Math.floor(Math.random() * links.length)];
-    const url = new URL(pick, SONNETS_BASE_URL).toString();
+    const pick = sonnets[Math.floor(Math.random() * sonnets.length)];
 
-    const sonnetResp = await axios.get(url, {
-      timeout: 10000,
-      headers: { 'User-Agent': 'HumanitiesFeed/1.0 (contact: you@example.com)' }
-    });
-
-    const $$ = cheerio.load(sonnetResp.data || '');
-
-    const title =
-      $$('#aueditable h1').first().text().trim() ||
-      $$('h1').first().text().trim() ||
-      null;
-
-    let text = normalizeSonnetText($$('blockquote').first().text());
-    if (!text) text = normalizeSonnetText($$('pre').first().text());
-    if (!text) text = normalizeSonnetText($$('body').text());
-
-    const number = extractRomanFromHref(pick);
+    // Optional: first line of English as "title" (keeps your UI nice)
+    const firstLine = (pick.text.split('\n').find(Boolean) || '').trim();
+    const title = firstLine || null;
 
     return res.json({
-      source: 'Shakespeare (MIT)',
-      number,
+      source: 'Petrarch (Project Gutenberg)',
+      number: pick.number,
       title,
-      text,
-      url
+      text: pick.text,
+      url: PETRARCH_BOOK_URL
     });
   } catch (err) {
-    console.error('[SONNET] Error:', err?.message || err);
-    return res.status(500).json({ error: 'Failed to fetch sonnet' });
+    console.error('[PETRARCH] Error:', err?.message || err);
+    return res.status(500).json({ error: 'Failed to fetch Petrarch sonnet' });
   }
 });
 
@@ -703,14 +768,14 @@ app.get('/api/articles', async (req, res) => {
     const bypass = force === '1' || force === 'true';
     const topicKey = String(req.query.topic || '').toLowerCase();
 
-    // ✅ NEW: Reject unknown topic keys (prevents silent fallback to random Wikipedia)
+    // Reject unknown topic keys
     if (topicKey && !WIKI_CATEGORY_TOPICS[topicKey] && !WIKI_TOPICS[topicKey]) {
       return res.status(400).json({
         error: `Unknown topic: ${topicKey}`,
-        knownTopics: Object.keys(WIKI_CATEGORY_TOPICS) // or union with WIKI_TOPICS if you prefer
+        knownTopics: Object.keys(WIKI_CATEGORY_TOPICS)
       });
     }
-    
+
     if (!bypass && !topicKey && articleCache.length > 0 && (now - lastRefresh) < CACHE_DURATION) {
       console.log('Returning cached articles');
       return res.json({ articles: articleCache, cached: true });
@@ -766,8 +831,8 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     cacheSize: articleCache.length,
-    lastRefresh,              // raw ms
-    lastRefreshIso,           // readable UTC ISO
+    lastRefresh,
+    lastRefreshIso,
     build: process.env.BUILD_ID || null
   });
 });
