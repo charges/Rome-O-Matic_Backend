@@ -188,6 +188,30 @@ function normalizeSonnetText(s) {
     .trim();
 }
 
+function normalizeSonnetText(s) {
+  return (s || '')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim();
+}
+
+// ADD THIS RIGHT HERE (below normalizeSonnetText)
+function stripGutenbergTail(s) {
+  if (!s) return s;
+  const markers = [
+    '*** END OF THE PROJECT GUTENBERG EBOOK',
+    'START: FULL LICENSE',
+    'THE FULL PROJECT GUTENBERG LICENSE',
+    "Transcriber’s Note:",
+    "Transcriber's Note:"
+  ];
+  let cut = s.length;
+  for (const m of markers) {
+    const i = s.indexOf(m);
+    if (i >= 0) cut = Math.min(cut, i);
+  }
+  return s.slice(0, cut).trim();
+}
 /**
  * =========================
  * Wikipedia fetchers
