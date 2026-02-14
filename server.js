@@ -722,8 +722,8 @@ romanHeaders.each((idx, el) => {
     const blocks = byRoman.get(pickRoman);
 
    // English translation is the second occurrence; Italian is the first
-const italianText = blocks[0];
-const englishText = blocks[1];
+const italianText = stripGutenbergTail(blocks[0]);
+const englishText = stripGutenbergTail(blocks[1]);
 
 return res.json({
   source: 'Petrarch (Project Gutenberg)',
