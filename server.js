@@ -676,16 +676,24 @@ app.get('/api/sonnet', async (req, res) => {
     const pickRoman = romans[Math.floor(Math.random() * romans.length)];
     const blocks = byRoman.get(pickRoman);
 
-    // English translation is the second occurrence
-    const englishText = blocks[1];
+   // English translation is the second occurrence; Italian is the first
+const italianText = blocks[0];
+const englishText = blocks[1];
 
-    return res.json({
-      source: 'Petrarch (Project Gutenberg)',
-      number: pickRoman,
-      title: `Sonnet ${pickRoman}`,
-      text: englishText,
-      url: PETRARCH_SOURCE_URL
-    });
+return res.json({
+  source: 'Petrarch (Project Gutenberg)',
+  number: pickRoman,
+  title: `Sonnet ${pickRoman}`,
+
+  // New fields
+  text_it: italianText,
+  text_en: englishText,
+
+  // Backward compatibility (current frontend expects `text`)
+  text: englishText,
+
+  url: PETRARCH_SOURCE_URL
+});
   } catch (err) {
     console.error('[PETRARCH] Error:', err?.message || err);
     return res.status(500).json({ error: 'Failed to fetch Petrarch sonnet' });
