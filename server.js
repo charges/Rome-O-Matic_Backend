@@ -677,17 +677,38 @@ app.get('/api/sonnet', async (req, res) => {
     // First block after a numeral is Italian, second is English.
     const byRoman = new Map();
 
-    $('h3').each((_, el) => {
-      const roman = $(el).text().trim();
-      if (!/^[IVXLCDM]+$/i.test(roman)) return;
+// Only <h3> nodes that are pure Roman numerals
+const romanHeaders = $('h3').filter((_, el) => {
+  const t = $(el).text().trim();
+  return /^[IVXLCDM]+$/i.test(t);
+});
 
-      const text = normalizeSonnetText($(el).nextUntil('h3').text());
-      if (!text) return;
+romanHeaders.each((idx, el) => {
+  const roman = $(el).text().trim().toUpperCase();
+  const nextRomanEl = romanHeaders.get(idx + 1);
 
-      const key = roman.toUpperCase();
-      if (!byRoman.has(key)) byRoman.set(key, []);
-      byRoman.get(key).push(text);
-    });
+  let chunk;
+
+  if (nextRomanEl) {
+    // bounded by next roman numeral header
+    chunk = $(el).nextUntil(nextRomanEl).text();
+  } else {
+    // last sonnet: try to stop before Gutenberg footer/license
+    const allAfter = $(el).nextAll();
+    const stopAt = allAfter.filter((_, node) => {
+      const txt = $(node).text ? $(node).text() : '';
+      return txt.includes('*** END OF THE PROJECT GUTENBERG EBOOK');
+    }).first();
+
+    chunk = stopAt.length ? $(el).nextUntil(stopAt).text() : $(el).nextAll().text();
+  }
+
+  const text = normalizeSonnetText(chunk);
+  if (!text) return;
+
+  if (!byRoman.has(roman)) byRoman.set(roman, []);
+  byRoman.get(roman).push(text);
+});
 
     const romans = Array.from(byRoman.entries())
       .filter(([, blocks]) => Array.isArray(blocks) && blocks.length >= 2)
